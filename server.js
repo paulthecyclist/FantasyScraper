@@ -35,7 +35,8 @@ app.post("/getPlayer", function (request, response) {
     // ...and the description
   , name: "tr[data-playerid=" + request.query.code + "]:data-name"
    , points: "tr[data-playerid=" + request.query.code + "]:data-points"
-}, (err, data) => {
+}, request.query.code
+,(err, data) => {
     response.send(err || data);
 });
   
@@ -49,6 +50,8 @@ var dreams = [
   "Climb a really tall mountain",
   "Wash the dishes"
   ];
+
+var playersWeek1 = [ {code:'4001', pts:7}, {code:'4002', pts:2} ]
 
 // listen for requests :)
 var listener = app.listen(process.env.PORT, function () {
@@ -88,7 +91,8 @@ function scrape(url, data, cb) {
     });
 }    
 
-function scrapeNode(url, data, cb) {
+
+function scrapeNode(url, data, code, cb) {
     // 1. Create the request
     req(url, (err, body) => {
         if (err) { return cb(err); }
@@ -96,26 +100,48 @@ function scrapeNode(url, data, cb) {
         //cheerio('#showall').click()
 
         // 2. Parse the HTML
-        var scraper = cheerio.load(body)
-          , pageData = {}
-          ;
-        
+         var scraper = cheerio.load(body);
+         var  pageData = {};
+         
         
         //cheerio.
-        console.log("Searching2");
+       
         
         // 3. Extract the data
         Object.keys(data).forEach(k => {
             var query = data[k].split(':')[0];
             var attributeName = data[k].split(':')[1];
-            console.log(query);
-            pageData[k] = scraper(query).attr(attributeName);
+            console.log(query +  ' : ' + attributeName );
+            
+            if (attributeName == 'data-points')
+            {
+                var previousPts = findPlayerPts(code)
+                //console.log("Searching Aguero week1: " + previousPts);
+                var totalPts = parseInt(scraper(query).attr(attributeName));
+                pageData[k] = totalPts - previousPts;
+            }
+            else
+            {
+              pageData[k] = scraper(query).attr(attributeName);
+            }
         });
 
         // Send the data in the callback
         cb(null, pageData);
     });
 }    
+
+function findPlayerPts(code)
+{
+  for (var i = 0; i < playersWeek1.length; i++)
+  {
+      if (playersWeek1[i].code == code)
+      {
+        return playersWeek1[i].pts;
+      }
+  }
+   return 0;
+}
 
 // Extract some data from my website
 /*
